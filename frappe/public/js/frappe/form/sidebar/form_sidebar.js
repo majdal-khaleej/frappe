@@ -184,6 +184,7 @@ frappe.ui.form.Sidebar = class {
 					},
 					fieldname: ["frequency"],
 				},
+				type: "GET",
 				callback: function (res) {
 					let el = me.sidebar.find(".auto-repeat-status");
 					el.find("span").html(__("Repeats {0}", [__(res.message.frequency)]));
@@ -266,6 +267,7 @@ frappe.ui.form.Sidebar = class {
 				doctype: this.frm.doctype,
 				name: this.frm.docname,
 			},
+			type: "GET",
 			callback: (r) => {
 				// docinfo will be synced
 				if (callback) callback(r.docinfo);
