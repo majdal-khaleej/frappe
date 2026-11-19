@@ -268,7 +268,7 @@ class TestUser(IntegrationTestCase):
 
 		user = frappe.copy_doc(self.globalTestRecords["User"][1])
 		user.email = "_test@example.com"
-		user.insert(set_name=user.email)
+		user.insert()
 
 		frappe.get_doc({"doctype": "ToDo", "description": "_Test"}).insert()
 
@@ -498,7 +498,7 @@ class TestUser(IntegrationTestCase):
 				"new_password": "Eastern_43A1W",
 				"roles": [{"doctype": "Has Role", "parentfield": "roles", "role": "System Manager"}],
 			}
-		).insert(ignore_permissions=True, ignore_if_duplicate=True, set_name=old_name)
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
 
 		frappe.rename_doc("User", user.name, new_name, force=True)
 		self.assertTrue(frappe.db.exists("Notification Settings", new_name))
@@ -510,7 +510,7 @@ class TestUser(IntegrationTestCase):
 		new_name = "test_user_rename_owner_new@example.com"
 		user = frappe.get_doc(
 			{"doctype": "User", "email": old_name, "first_name": "_Test", "send_welcome_email": 0}
-		).insert(ignore_permissions=True, ignore_if_duplicate=True, set_name=old_name)
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
 
 		todo = frappe.get_doc({"doctype": "ToDo", "description": "owned by a renamed user"}).insert()
 		frappe.db.set_value(
@@ -541,7 +541,7 @@ class TestUser(IntegrationTestCase):
 		new_name = "test_user_rename_reused_new@example.com"
 		frappe.get_doc(
 			{"doctype": "User", "email": old_name, "first_name": "_Test", "send_welcome_email": 0}
-		).insert(ignore_permissions=True, ignore_if_duplicate=True, set_name=old_name)
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
 		taken_at = frappe.db.get_value("User", old_name, "creation")
 
 		before = frappe.get_doc({"doctype": "ToDo", "description": "written before the rename"}).insert()
@@ -573,12 +573,12 @@ class TestUser(IntegrationTestCase):
 		for email in (freed, renamed, other):
 			frappe.get_doc(
 				{"doctype": "User", "email": email, "first_name": "_Test", "send_welcome_email": 0}
-			).insert(ignore_permissions=True, ignore_if_duplicate=True, set_name=email)
+			).insert(ignore_permissions=True, ignore_if_duplicate=True)
 
 		unrelated = "test_user_rename_pending_unrelated@example.com"
 		frappe.get_doc(
 			{"doctype": "User", "email": unrelated, "first_name": "_Test", "send_welcome_email": 0}
-		).insert(ignore_permissions=True, ignore_if_duplicate=True, set_name=unrelated)
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
 
 		def pending_job(method, old_name, new_name):
 			return SimpleNamespace(
@@ -633,7 +633,7 @@ class TestUser(IntegrationTestCase):
 				"new_password": "Eastern_43A1W",
 				"roles": [{"doctype": "Has Role", "parentfield": "roles", "role": "System Manager"}],
 			}
-		).insert(ignore_permissions=True, ignore_if_duplicate=True, set_name=old_name)
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
 
 		frappe.get_doc(
 			{
@@ -644,7 +644,7 @@ class TestUser(IntegrationTestCase):
 				"new_password": "Eastern_43A1W",
 				"roles": [{"doctype": "Has Role", "parentfield": "roles", "role": "System Manager"}],
 			}
-		).insert(ignore_permissions=True, ignore_if_duplicate=True, set_name=actor_name)
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
 
 		frappe.get_doc(
 			{
@@ -687,9 +687,9 @@ class TestUser(IntegrationTestCase):
 			sign_up(random_user, random_user_name, "/welcome"),
 			(1, "Please check your email for verification"),
 		)
-		user_id = get_user_by_email(random_user)
-		self.assertNotEqual(user_id, random_user)
-		self.assertEqual(frappe.cache.hget("redirect_after_login", user_id), sanitize_redirect("/welcome"))
+		self.assertEqual(
+			frappe.cache.hget("redirect_after_login", random_user), sanitize_redirect("/welcome")
+		)
 
 		# re-register
 		self.assertTupleEqual(
@@ -698,7 +698,7 @@ class TestUser(IntegrationTestCase):
 		)
 
 		# disabled user
-		user = frappe.get_doc("User", user_id)
+		user = frappe.get_doc("User", random_user)
 		user.enabled = 0
 		user.save()
 
@@ -1110,7 +1110,6 @@ class TestUserEmailHelpers(IntegrationTestCase):
 		with test_user(roles=[], generated_id=True) as user:
 			frappe.db.set_value("User", user.name, "email", f"{user.name}@frappe.invalid")
 			user = frappe.get_doc("User", user.name)
-			user.flags.skip_email_from_name = True
 			user.first_name = "Renamed"
 			user.save()
 
@@ -1130,7 +1129,6 @@ class TestUserEmailHelpers(IntegrationTestCase):
 		def add_user_named(name):
 			user = frappe.new_doc("User", email=f"_test_{frappe.generate_hash(length=6)}@example.com")
 			user.first_name = "Clash"
-			user.flags.skip_email_from_name = True
 			user.insert(set_name=name)
 
 		# a changed email is left alone: migrate stops
@@ -1234,7 +1232,8 @@ def test_user(
 			**kwargs,
 		)
 		user.append_roles(*roles)
-		user.insert(set_name=None if generated_id else email)
+		user.flags.random_id = generated_id
+		user.insert()
 		yield user
 		commit and frappe.db.commit()
 	finally:
