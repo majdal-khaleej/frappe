@@ -262,10 +262,14 @@ frappe.data_import.DataExporter = class DataExporter {
 	}
 
 	get_export_count(filters) {
-		return frappe.xcall("frappe.core.doctype.data_import.data_import.get_export_count", {
-			doctype: this.doctype,
-			filters,
-		});
+		return frappe.xcall(
+			"frappe.core.doctype.data_import.data_import.get_export_count",
+			{
+				doctype: this.doctype,
+				filters,
+			},
+			"GET"
+		);
 	}
 
 	update_primary_action(no_of_records) {

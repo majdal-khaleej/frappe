@@ -514,9 +514,13 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 				resolve();
 			} else {
 				frappe
-					.xcall("frappe.desk.query_report.get_script", {
-						report_name: this.report_name,
-					})
+					.xcall(
+						"frappe.desk.query_report.get_script",
+						{
+							report_name: this.report_name,
+						},
+						"GET"
+					)
 					.then((settings) => {
 						if (!frappe.query_reports[settings.custom_report_name || report_name]) {
 							frappe.dom.eval(settings.script);
@@ -845,7 +849,6 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 
 			this.last_ajax = frappe.call({
 				method: "frappe.desk.query_report.run",
-				type: "GET",
 				args: {
 					report_name: this.report_name,
 					filters: filters,
@@ -1898,6 +1901,7 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 		const r = await frappe.call({
 			method: "frappe.desk.query_report.get_print_format_data",
 			args: { print_format },
+			type: "GET",
 		});
 		if (!r?.message) return null;
 		const { html, css, print_format_type } = r.message;
@@ -1938,9 +1942,12 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 		}
 
 		try {
-			const r = await frappe.call("frappe.utils.print_format.render_letterhead_for_print", {
-				letterhead: print_settings.letter_head_name,
-				doc: doc_context,
+			const r = await frappe.call({
+				method: "frappe.utils.print_format.render_letterhead_for_print",
+				args: {
+					letterhead: print_settings.letter_head_name,
+					doc: doc_context,
+				},
 			});
 			if (r.message) {
 				print_settings.letter_head = r.message;
